@@ -2,44 +2,61 @@ var http = require('http');
 var fs = require('fs');
 var url = require('url');
 
+function templateHTML(title, list, body){
+  return `
+  <!doctype html>
+  <html>
+  <head>
+    <title>WEB1 - ${title}</title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1><a href="/">WEB</a></h1>
+    ${list}
+    ${body}
+  </body>
+  </html>
+  `;
+}
+
+function templateList(filelist){
+  var list = '<ul>';
+  var i = 0;
+  while(i < filelist.length){
+    list = list + `<li><a href="/?id=${filelist[i]}">${filelist[i]}</a></li>`
+    i = i+1;
+  };
+  list = list + '</ul>';
+  return list;
+}
+
 var app = http.createServer(function(request,response){
     var _url = request.url;
     var queryData = url.parse(_url, true).query;
-    var title = queryData.id;
-    if(_url == '/'){
-        title = 'Welcom';
-    }
-    if(_url == '/favicon.ico'){
+    var pathname = url.parse(_url, true).pathname;
+    if(pathname === '/'){
+        if(queryData.id === undefined){
+          fs.readdir('./data', function(err, filelist) {
+                var title = 'Welcome';
+                var description = 'Hello, Node.js'
+                var list = templateList(filelist)
+                var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+                response.writeHead(200);
+                response.end(template);
+          });
+        }else{
+          fs.readdir('./data', function(err, filelist) {
+            var list = templateList(filelist)
+            fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description) {
+                var title = queryData.id;
+                var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+                response.writeHead(200);
+                response.end(template);
+          });
+        });
+    }}else{
         response.writeHead(404);
-        response.end();
-        return;
+        response.end('Not found');
     }
-    response.writeHead(200);
-    // console.log(__dirname+url); // print와 같은 역할
-    // response.end(fs.readFileSync(__dirname + _url)); //최종적으로 이 명령어를 통해 web에 노출됨.
-
-    var template = `
-    <!doctype html>
-    <html>
-    <head>
-      <title>WEB1 - ${title}</title>
-      <meta charset="utf-8">
-    </head>
-    <body>
-      <h1><a href="/">WEB</a></h1>
-      <ol>
-        <li><a href="/?id=HTML">HTML</a></li>
-        <li><a href="/?id=CSS">CSS</a></li>
-        <li><a href="/?id=JavaScript">JavaScript</a></li>
-      </ol>
-      <h2>${title}</h2>
-      <p><a href="https://www.w3.org/TR/html5/" target="_blank" title="html5 speicification">Hypertext Markup Language (HTML)</a> is the standard markup language for <strong>creating <u>web</u> pages</strong> and web applications.Web browsers receive HTML documents from a web server or from local storage and render them into multimedia web pages. HTML describes the structure of a web page semantically and originally included cues for the appearance of the document.
-      </p><p style="margin-top:45px;">HTML elements are the building blocks of HTML pages. With HTML constructs, images and other objects, such as interactive forms, may be embedded into the rendered page. It provides a means to create structured documents by denoting structural semantics for text such as headings, paragraphs, lists, links, quotes and other items. HTML elements are delineated by tags, written using angle brackets.
-      </p>
-    </body>
-    </html>
-    `
-    response.end(template);
- 
 });
 app.listen(3000);
